@@ -1,1 +1,1 @@
-#Application made to practice graphql, mongodb and react
+# Application made to practice graphql, mongodb and react
