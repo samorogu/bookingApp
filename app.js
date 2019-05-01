@@ -2,10 +2,11 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const graphqlHttp = require("express-graphql");
 const { buildSchema } = require("graphql");
+const mongoose = require("mongoose");
+
+const Event = require("./models/event");
 
 const app = express();
-
-const events = [];
 
 app.use(bodyParser.json());
 
@@ -43,22 +44,47 @@ app.use(
     `),
     rootValue: {
       events: () => {
-        return events;
+        return Event.find()
+          .then(events => {
+            return events.map(event => {
+              return { ...event._doc, _id: event.id };
+            });
+          })
+          .catch(err => {
+            throw err;
+          });
       },
       createEvent: args => {
-        const event = {
-          _id: Math.random().toString(),
+        const event = new Event({
           title: args.eventInput.title,
           description: args.eventInput.description,
           price: +args.eventInput.price,
-          date: args.eventInput.date
-        };
-        events.push(event);
-        return event;
+          date: new Date(args.eventInput.date)
+        });
+        return event
+          .save()
+          .then(result => {
+            console.log(result);
+            return { ...result._doc, _id: result._doc._id.toString() };
+          })
+          .catch(err => {
+            console.log(err);
+            throw err;
+          });
       }
     },
     graphiql: true
   })
 );
 
-app.listen(3000);
+let uri =
+  "mongodb://bookingUser:<Password>@cluster0-shard-00-00-ly89x.mongodb.net:27017,cluster0-shard-00-01-ly89x.mongodb.net:27017,cluster0-shard-00-02-ly89x.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true";
+
+mongoose
+  .connect(uri)
+  .then(() => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
